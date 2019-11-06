@@ -63,6 +63,7 @@ class Notice {
 		'capability'    => 'edit_theme_options',
 		'option_prefix' => 'wptrt_notice_dismissed',
 		'screens'       => [],
+		'dismissible'	=> true,
 	];
 
 	/**
@@ -107,20 +108,21 @@ class Notice {
 	 * @param string $message The message for our notice.
 	 * @param array  $options An array of additional options to change the defaults for this notice.
 	 *                        [
-	 *                            'screens'       => (array)  An array of screens where the notice will be displayed.
-	 *                                                        Leave empty to always show.
-	 *                                                        Defaults to an empty array.
-	 *                            'scope'         => (string) Can be "global" or "user".
-	 *                                                        Determines if the dismissed status will be saved as an option or user-meta.
-	 *                                                        Defaults to "global".
-	 *                            'type'          => (string) Can be one of "info", "success", "warning", "error".
-	 *                                                        Defaults to "info".
-	 *                            'alt_style'     => (bool)   Whether we want to use alt styles or not.
-	 *                                                        Defaults to false.
-	 *                            'capability'    => (string) The user capability required to see the notice.
-	 *                                                        Defaults to "edit_theme_options".
-	 *                            'option_prefix' => (string) The prefix that will be used to build the option (or post-meta) name.
-	 *                                                        Can contain lowercase latin letters and underscores.
+	 *                            'screens'       => (array)        An array of screens where the notice will be displayed.
+	 *                                                              Leave empty to always show.
+	 *                                                              Defaults to an empty array.
+	 *                            'scope'         => (string)       Can be "global" or "user".
+	 *                                                              Determines if the dismissed status will be saved as an option or user-meta.
+	 *                                                              Defaults to "global".
+	 *                            'type'          => (string)       Can be one of "info", "success", "warning", "error".
+	 *                                                              Defaults to "info".
+	 *                            'alt_style'     => (bool)         Whether we want to use alt styles or not.
+	 *                                                              Defaults to false.
+	 *                            'capability'    => (string)       The user capability required to see the notice.
+	 *                                                              Defaults to "edit_theme_options".
+	 *                            'option_prefix' => (string)	The prefix that will be used to build the option (or post-meta) name.
+	 *								Can contain lowercase latin letters and underscores.
+	 *			      'dismissible'   => (boolean)	If false, notice is persistant and must be controled with PHP
 	 *                        ].
 	 */
 	public function __construct( $id, $title, $message, $options = [] ) {
@@ -140,13 +142,15 @@ class Notice {
 		 * Allow filtering the allowed HTML tags array.
 		 *
 		 * @since 1.0.2
-		 * @param array The list of allowed HTML tags.
+		 * @param array $allowed_html The list of allowed HTML tags.
 		 * @return array
 		 */
 		$this->allowed_html = apply_filters( 'wptrt_admin_notices_allowed_html', $this->allowed_html );
 
-		// Instantiate the Dismiss object.
-		$this->dismiss = new Dismiss( $this->id, $this->options['option_prefix'] );
+		if( $this->options['dismissible'] ) {
+			// Instantiate the Dismiss object.
+			$this->dismiss = new Dismiss( $this->id, $this->options['option_prefix'] );
+		}
 	}
 
 	/**
@@ -195,7 +199,7 @@ class Notice {
 		}
 
 		// Don't show if notice has been dismissed.
-		if ( $this->dismiss->is_dismissed() ) {
+		if ( $this->options['dismissible'] && $this->dismiss->is_dismissed() ) {
 			return false;
 		}
 
@@ -212,8 +216,11 @@ class Notice {
 	public function get_classes() {
 		$classes = [
 			'notice',
-			'is-dismissible',
 		];
+		
+		if( $this->options['dismissible'] ) {
+			$classes [] = 'is-dismissible';
+		}
 
 		// Make sure the defined type is allowed.
 		$this->options['type'] = in_array( $this->options['type'], $this->allowed_types ) ? $this->options['type'] : 'info';
@@ -282,5 +289,17 @@ class Notice {
 
 		// Check if we're on one of the defined screens.
 		return ( in_array( get_current_screen()->id, $this->options['screens'], true ) );
+	}
+
+	
+	/**
+	 * Returns True if notice is dissmissible.
+	 *
+	 * @access public
+	 * @since 1.0
+	 * @return string
+	 */
+	public function is_dismissible() {
+		return $this->options['dismissible'];
 	}
 }
