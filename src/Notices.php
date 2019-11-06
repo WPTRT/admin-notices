@@ -127,7 +127,9 @@ class Notices {
 
 		foreach ( $notices as $notice ) {
 			if ( $notice->show() ) {
-				$notice->dismiss->print_script();
+				if( $notice->is_dismissible() ) {
+					$notice->dismiss->print_script();
+				}
 			}
 		}
 	}
